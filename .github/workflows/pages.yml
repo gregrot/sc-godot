@@ -49,6 +49,8 @@ jobs:
           EXPORT_DIR="$(readlink -f build)"
           cd "${PROJECT_PATH}"
           godot --headless --verbose --export-release "Web" "${EXPORT_DIR}/web/index.html"
+          ls -laiht
+          ls -laihtr build
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v4
