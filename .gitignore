@@ -3,3 +3,7 @@
 /android/
 # Local tooling
 .bin/
+
+# Build output directories
+build/web/*
+!build/web/.gitkeep
