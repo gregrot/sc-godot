@@ -5,6 +5,8 @@ const MovementSystem := preload("res://robot/systems/movement_system.gd")
 const RobotCpuSystem := preload("res://robot/systems/cpu_system.gd")
 const RobotFactory := preload("res://robot/robot_factory.gd")
 const FrameStatusComponent := preload("res://robot/components/c_frame_status.gd")
+const CpuCapabilityComponent := preload("res://robot/components/c_cpu_capability.gd")
+const RobotBtDebugPanel := preload("res://robot/ui/robot_bt_debug_panel.tscn")
 
 var world: World
 var ecs: _ECS
@@ -12,6 +14,8 @@ var factory := RobotFactory.new()
 var robot_frames: Array = []
 var status_label: Label
 var frame_visuals: Dictionary = {}
+var bt_debug_panel: Control
+var cached_cpu_modules: Array = []
 
 
 func _ready() -> void:
@@ -19,6 +23,13 @@ func _ready() -> void:
 	await _setup_world()
 	status_label = _ensure_status_label()
 	_spawn_robot()
+	_ensure_toggle_action()
+	bt_debug_panel = RobotBtDebugPanel.instantiate()
+	bt_debug_panel.visible = false
+	bt_debug_panel.position = Vector2(20, 80)
+	bt_debug_panel.size = Vector2(360, 320)
+	add_child(bt_debug_panel)
+	bt_debug_panel.call_deferred("set_cpu_modules", [])
 	set_process(true)
 
 func _ensure_status_label() -> Label:
@@ -94,6 +105,8 @@ func _update_frame_visual(frame, position: Vector2) -> void:
 func _process(delta: float) -> void:
 	if is_instance_valid(ecs) and ecs.world != null:
 		ecs.process(delta)
+	_handle_debug_panel_input()
+	_update_debug_panel_modules()
 	_update_status_text()
 
 func _update_status_text() -> void:
@@ -117,3 +130,34 @@ func _update_status_text() -> void:
 		_update_frame_visual(frame, pos)
 		lines.append("%s pos=(%.2f, %.2f)" % [frame.name, pos.x, pos.y])
 	status_label.text = "Robots: %d\n%s" % [robot_frames.size(), "\n".join(lines)]
+
+func _ensure_toggle_action() -> void:
+	if InputMap.has_action("toggle_bt_debug"):
+		return
+	InputMap.add_action("toggle_bt_debug")
+	var event := InputEventKey.new()
+	event.keycode = KEY_F6
+	InputMap.action_add_event("toggle_bt_debug", event)
+
+func _handle_debug_panel_input() -> void:
+	if bt_debug_panel == null:
+		return
+	if Input.is_action_just_pressed("toggle_bt_debug"):
+		bt_debug_panel.visible = not bt_debug_panel.visible
+
+func _update_debug_panel_modules() -> void:
+	if bt_debug_panel == null or world == null:
+		return
+	var modules := _collect_cpu_modules()
+	if modules != cached_cpu_modules:
+		cached_cpu_modules = modules.duplicate()
+		bt_debug_panel.set_cpu_modules(cached_cpu_modules)
+
+func _collect_cpu_modules() -> Array:
+	var modules: Array = []
+	for entity in world.entities:
+		if entity == null or not is_instance_valid(entity):
+			continue
+		if entity.get_component(CpuCapabilityComponent) != null:
+			modules.append(entity)
+	return modules
