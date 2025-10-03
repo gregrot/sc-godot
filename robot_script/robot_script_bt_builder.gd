@@ -8,6 +8,7 @@ const RobotScriptProgram := preload("res://robot_script/behaviour_nodes/robot_sc
 const RobotScriptAssignLeaf := preload("res://robot_script/behaviour_nodes/robot_script_assign_leaf.gd")
 const RobotScriptExpressionLeaf := preload("res://robot_script/behaviour_nodes/robot_script_expression_leaf.gd")
 const RobotScriptFunctionDefLeaf := preload("res://robot_script/behaviour_nodes/robot_script_function_def_leaf.gd")
+const RobotScriptForLoop := preload("res://robot_script/behaviour_nodes/robot_script_for_loop.gd")
 
 const KEY_RUNTIME := StringName("robot_script/runtime")
 const KEY_ENV := StringName("robot_script/env")
@@ -47,16 +48,28 @@ static func build(engine: RobotScriptEngine, ast: Dictionary, config: Dictionary
 static func _build_statement(stmt: Dictionary) -> Node:
 	match stmt.get("type"):
 		Parser.NODE_ASSIGN:
-			var assign := RobotScriptAssignLeaf.new(stmt)
+			var assign = RobotScriptAssignLeaf.new(stmt)
 			assign.name = "Assign_" + stmt.get("name", "")
 			return assign
 		Parser.NODE_EXPR_STMT:
-			var expr_node := RobotScriptExpressionLeaf.new(stmt.get("expr", {}))
+			var expr_node = RobotScriptExpressionLeaf.new(stmt.get("expr", {}))
 			expr_node.name = "Expr"
 			return expr_node
 		Parser.NODE_FUNCTION:
-			var fn_node := RobotScriptFunctionDefLeaf.new(stmt)
+			var fn_node = RobotScriptFunctionDefLeaf.new(stmt)
 			fn_node.name = "Func_" + stmt.get("name", "")
 			return fn_node
+		Parser.NODE_FOR:
+			var loop_node = RobotScriptForLoop.new()
+			loop_node.configure(stmt)
+			loop_node.name = "For_" + stmt.get("iter", "i")
+			var body = RobotScriptProgram.new()
+			body.name = "Body"
+			for body_stmt in stmt.get("body", []):
+				var child_node: Node = _build_statement(body_stmt)
+				if child_node != null:
+					body.add_child(child_node)
+			loop_node.add_child(body)
+			return loop_node
 		_:
 			return null

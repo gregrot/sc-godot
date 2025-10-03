@@ -8,6 +8,8 @@ const KEY_ERRORS := StringName("robot_script/errors")
 
 var _runtime_id: int = 0
 var last_status: int = BTStatus.SUCCESS
+var _pending_execution: bool = true
+var _elapsed: float = 0.0
 
 func tick(delta: float, actor: Node, blackboard: Blackboard) -> BTStatus:
 	var runtime: RobotScriptRuntime = _get_runtime(blackboard)
@@ -17,14 +19,28 @@ func tick(delta: float, actor: Node, blackboard: Blackboard) -> BTStatus:
 	if runtime.get_instance_id() != _runtime_id:
 		_runtime_id = runtime.get_instance_id()
 		_on_runtime_changed(runtime, blackboard)
+		_reset_timer()
+	var duration := _get_duration()
+	if duration > 0.0:
+		if _pending_execution:
+			_elapsed += delta
+			if _elapsed < duration:
+				last_status = BTStatus.RUNNING
+				return last_status
+			_pending_execution = false
+			_elapsed = 0.0
+	else:
+		_pending_execution = false
 	var status: int = _run(delta, actor, blackboard, runtime)
 	if runtime.has_errors():
 		blackboard.set_value(KEY_ERRORS, runtime.get_errors())
+		_reset_timer()
 		last_status = BTStatus.FAILURE
 		return last_status
 	_sync_environment(runtime, blackboard)
 	if status == BTStatus.SUCCESS:
 		_on_success(runtime, blackboard)
+	_reset_timer()
 	last_status = status
 	return last_status
 
@@ -49,3 +65,13 @@ func _set_last_result(blackboard: Blackboard, value: Variant) -> void:
 
 func get_last_status() -> int:
 	return last_status
+
+func reset() -> void:
+	_reset_timer()
+
+func _reset_timer() -> void:
+	_elapsed = 0.0
+	_pending_execution = true
+
+func _get_duration() -> float:
+	return 1.0

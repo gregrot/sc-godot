@@ -27,5 +27,6 @@ func process(module: Entity, delta: float) -> void:
 	var status: C_FrameStatus = frame.get_component(FrameStatus)
 	if status == null:
 		return
-	status.position += Vector2.RIGHT * move_capability.speed * delta
+	var heading := deg_to_rad(status.rotation_degrees)
+	status.position += Vector2.RIGHT.rotated(heading) * move_capability.speed * delta
 	frame.set_meta("position", status.position)

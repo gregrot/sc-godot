@@ -27,7 +27,7 @@ func build_basic_robot(world: World, movement_speed: float = 4.0) -> MechanismFr
 	world.add_entity(cpu_module)
 	var program = cpu_module.get_component(CCpuProgram)
 	if program:
-		program.script_text = "set_speed(100)\n"
+		program.script_text = "for i in 1..10\n\tmove(100)\n\tturn(90)\nend\n"
 	_attach_module_to_frame(frame, cpu_module, "cpu")
 	return frame
 

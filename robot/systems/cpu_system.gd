@@ -7,6 +7,8 @@ const ModuleAttachment := preload("res://robot/components/c_module_attachment.gd
 const AttachedToFrame := preload("res://robot/components/c_attached_to_frame.gd")
 const ScriptFunctionExport := preload("res://robot/components/c_script_function_export.gd")
 const ScriptPropertyExport := preload("res://robot/components/c_script_property_export.gd")
+const FrameStatus := preload("res://robot/components/c_frame_status.gd")
+const MoveCapability := preload("res://robot/components/c_move_capability.gd")
 const RobotScriptEngine := preload("res://robot_script/robot_script_engine.gd")
 const RobotScriptBtBuilder = preload("res://robot_script/robot_script_bt_builder.gd")
 const RobotScriptRuntime = preload("res://robot_script/robot_script_runtime.gd")
@@ -41,12 +43,12 @@ func process(cpu_module: Entity, delta: float) -> void:
 	var frame: Entity = frame_rel.target
 	if frame == null or not is_instance_valid(frame):
 		return
-	var exports := _collect_exports(frame)
-	var signature := _build_export_signature(exports)
+	var exports = _collect_exports(frame)
+	var signature = _build_export_signature(exports)
 	var cache: Dictionary = cpu_module.get_meta(SCRIPT_CACHE_KEY, {})
 	var needs_rebuild: bool = cache.is_empty() or cache.get("script", "") != script or cache.get("signature") != signature
 	if needs_rebuild:
-		cache = _rebuild_cache(cpu_module, script, exports, signature)
+		cache = _rebuild_cache(cpu_module, frame, script, exports, signature)
 		if cache.is_empty():
 			cpu_module.set_meta(SCRIPT_CACHE_KEY, {})
 			return
@@ -59,7 +61,7 @@ func process(cpu_module: Entity, delta: float) -> void:
 		return
 	var status: int = program_node.tick(delta, null, blackboard)
 	var result_value: Variant = blackboard.get_value(BB_KEY_LAST_RESULT)
-	var response := {
+	var response = {
 		"ok": not runtime.has_errors(),
 		"result": result_value,
 		"vars": runtime.snapshot_environment(),
@@ -125,7 +127,7 @@ func _build_export_signature(exports: Array) -> PackedStringArray:
 	entries.sort()
 	return entries
 
-func _rebuild_cache(cpu_module: Entity, script: String, exports: Array, signature: PackedStringArray) -> Dictionary:
+func _rebuild_cache(cpu_module: Entity, frame: Entity, script: String, exports: Array, signature: PackedStringArray) -> Dictionary:
 	var engine: RobotScriptEngine = RobotScriptEngine.new()
 	engine.bind("print", Callable(self, "_script_log").bind(cpu_module))
 	for entry in exports:
@@ -134,11 +136,13 @@ func _rebuild_cache(cpu_module: Entity, script: String, exports: Array, signatur
 			engine.bind(name, entry.get("callable"))
 		else:
 			engine.bind(name, Callable(self, "_invoke_getter").bind(entry.get("getter")))
-	var compile_result := engine.compile(script)
+	engine.bind("move", Callable(self, "_builtin_move").bind(frame))
+	engine.bind("turn", Callable(self, "_builtin_turn").bind(frame))
+	var compile_result = engine.compile(script)
 	if not compile_result.get("ok", false):
 		cpu_module.set_meta("last_program_result", compile_result)
 		return {}
-	var build_result := RobotScriptBtBuilder.build(engine, compile_result.get("ast", {}))
+	var build_result = RobotScriptBtBuilder.build(engine, compile_result.get("ast", {}))
 	var root: BTRoot = build_result.get("root")
 	var program_node: Node = null
 	if root != null and root.get_child_count() > 0:
@@ -177,9 +181,42 @@ func _build_module_table(frame: Entity) -> Dictionary:
 		var slot: String = ""
 		if rel.relation is ModuleAttachment:
 			slot = rel.relation.slot_name
-		var key := slot if not slot.is_empty() else str(module.get_instance_id())
+		var key = slot if not slot.is_empty() else str(module.get_instance_id())
 		modules[key] = module
 	return modules
+
+func _builtin_move(distance: Variant, frame: Entity) -> void:
+	if frame == null or not is_instance_valid(frame):
+		return
+	var status: C_FrameStatus = frame.get_component(FrameStatus)
+	if status == null:
+		return
+	var dist = float(distance)
+	var heading = deg_to_rad(status.rotation_degrees)
+	status.position += Vector2.RIGHT.rotated(heading) * dist
+	frame.set_meta("position", status.position)
+	frame.set_meta("last_move_distance", dist)
+	var move_count: int = frame.get_meta("move_call_count", 0)
+	frame.set_meta("move_call_count", move_count + 1)
+	for rel in _get_module_relationships(frame):
+		var module = rel.target
+		if module == null:
+			continue
+		var capability: C_MoveCapability = module.get_component(MoveCapability)
+		if capability:
+			capability.speed = 0.0
+
+func _builtin_turn(angle: Variant, frame: Entity) -> void:
+	if frame == null or not is_instance_valid(frame):
+		return
+	var status: C_FrameStatus = frame.get_component(FrameStatus)
+	if status == null:
+		return
+	var turn_angle := float(angle)
+	status.rotation_degrees = fposmod(status.rotation_degrees + turn_angle, 360.0)
+	frame.set_meta("last_turn_angle", turn_angle)
+	var turn_count: int = frame.get_meta("turn_call_count", 0)
+	frame.set_meta("turn_call_count", turn_count + 1)
 
 func _script_log(cpu_module: Entity, value) -> void:
 	var label: Label = cpu_module.get_meta("log_label") as Label
