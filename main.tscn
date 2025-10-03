@@ -1,11 +1,10 @@
-[gd_scene load_steps=2 format=3 uid="uid://bc8r6iksvb6d0"]
+[gd_scene load_steps=3 format=3 uid="uid://bc8r6iksvb6d0"]
 
-[ext_resource type="Script" uid="uid://b8l5fo7jm4ctb" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://b8l5fo7jm4ctb" path="res://main.gd" id="1_main"]
+[ext_resource type="Script" path="res://addons/gecs/world.gd" id="2_world"]
 
-[node name="Node2D" type="Node2D"]
-script = ExtResource("1_ig7tw")
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
 
-[node name="Button" type="Button" parent="."]
-offset_right = 8.0
-offset_bottom = 8.0
-text = "Hi"
+[node name="World" type="Node" parent="."]
+script = ExtResource("2_world")

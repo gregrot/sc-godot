@@ -3,6 +3,7 @@ extends Node2D
 const WorldScene := preload("res://addons/gecs/world.gd")
 const MovementSystem := preload("res://robot/systems/movement_system.gd")
 const RobotFactory := preload("res://robot/robot_factory.gd")
+const MechanismFrame := preload("res://robot/entities/frame.gd")
 const FrameStatusComponent := preload("res://robot/components/c_frame_status.gd")
 
 var world: World
@@ -14,15 +15,13 @@ func _ready() -> void:
 	await _ensure_ecs_singleton()
 	await _setup_world()
 	status_label = _ensure_status_label()
-	var button: Button = $Button
-	button.text = "Assemble Robot"
-	button.pressed.connect(_on_button_pressed)
+	_spawn_robot()
 
 func _ensure_status_label() -> Label:
 	var label := Label.new()
 	label.name = "RobotStatus"
-	label.position = Vector2(10, 50)
-	label.text = "No robots assembled yet."
+	label.position = Vector2(10, 10)
+	label.text = "Robots: 0"
 	add_child(label)
 	return label
 
@@ -40,18 +39,22 @@ func _ensure_ecs_singleton() -> void:
 		await ecs_singleton.ready
 
 func _setup_world() -> void:
-	world = WorldScene.new()
-	add_child(world)
+	world = $World
 	await world.ready
 	ECS.world = world
 	ECS.debug = false
 	world.add_system(MovementSystem.new())
 
-func _on_button_pressed() -> void:
-	var frame := factory.build_basic_robot(world)
+func _spawn_robot(speed: float = 4.0) -> void:
+	var frame := factory.build_basic_robot(world, speed)
+	_ensure_frame_visual(frame)
 	robot_frames.append(frame)
-	status_label.text = "Robots: %d" % robot_frames.size()
-	print("Built robot with movement module:", frame.name)
+	_update_status_text()
+
+func _ensure_frame_visual(frame: MechanismFrame) -> void:
+	var status: C_FrameStatus = frame.get_component(FrameStatusComponent)
+	var pos := Vector2.ZERO if status == null else status.position
+	frame.update_visual(pos)
 
 func _process(delta: float) -> void:
 	if Engine.has_singleton("ECS") and ECS.world != null:
