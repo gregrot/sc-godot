@@ -7,13 +7,15 @@ const RobotFactory := preload("res://robot/robot_factory.gd")
 const FrameStatusComponent := preload("res://robot/components/c_frame_status.gd")
 
 var world: World
+var ecs: _ECS
 var factory := RobotFactory.new()
 var robot_frames: Array = []
 var status_label: Label
 var frame_visuals: Dictionary = {}
 
+
 func _ready() -> void:
-	await _ensure_ecs_singleton()
+	ecs = await _ensure_ecs_singleton()
 	await _setup_world()
 	status_label = _ensure_status_label()
 	_spawn_robot()
@@ -27,25 +29,41 @@ func _ensure_status_label() -> Label:
 	add_child(label)
 	return label
 
-func _ensure_ecs_singleton() -> void:
+func _ensure_ecs_singleton() -> _ECS:
 	var viewport := get_tree().root
 	if not viewport.has_node("Root"):
 		var holder := Node.new()
 		holder.name = "Root"
 		viewport.call_deferred("add_child", holder)
 		await get_tree().process_frame
-	if not Engine.has_singleton("ECS"):
+
+	var existing: _ECS = null
+	if Engine.has_singleton("ECS"):
+		existing = Engine.get_singleton("ECS")
+	elif viewport.has_node("ECS"):
+		existing = viewport.get_node("ECS")
+
+	if existing == null:
 		var ecs_singleton := preload("res://addons/gecs/ecs.gd").new()
 		ecs_singleton.name = "ECS"
 		viewport.call_deferred("add_child", ecs_singleton)
 		await ecs_singleton.ready
+		existing = ecs_singleton
+	elif not existing.is_inside_tree():
+		viewport.call_deferred("add_child", existing)
+		await existing.ready
+
+	return existing
 
 func _setup_world() -> void:
 	world = $World
 	if not world.is_node_ready():
 		await world.ready
-	ECS.world = world
-	ECS.debug = false
+	if ecs == null:
+		push_error("ECS singleton not available")
+		return
+	ecs.world = world
+	ecs.debug = false
 	world.add_system(RobotCpuSystem.new())
 	world.add_system(MovementSystem.new())
 
@@ -74,8 +92,8 @@ func _update_frame_visual(frame, position: Vector2) -> void:
 	shape.position = position
 
 func _process(delta: float) -> void:
-	if Engine.has_singleton("ECS") and ECS.world != null:
-		ECS.process(delta)
+	if is_instance_valid(ecs) and ecs.world != null:
+		ecs.process(delta)
 	_update_status_text()
 
 func _update_status_text() -> void:

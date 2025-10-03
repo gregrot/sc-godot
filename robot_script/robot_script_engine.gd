@@ -30,6 +30,7 @@ func clear_builtins() -> void:
 	_builtins.clear()
 
 func run(script_text: String, variables: Dictionary = {}) -> Dictionary:
+	print("Running script")
 	_errors.clear()
 	var tokens: Array = _tokenize(script_text)
 	if _has_errors():
