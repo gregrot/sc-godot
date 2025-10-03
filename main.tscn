@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://bc8r6iksvb6d0"]
 
 [ext_resource type="Script" uid="uid://b8l5fo7jm4ctb" path="res://main.gd" id="1_main"]
-[ext_resource type="Script" path="res://addons/gecs/world.gd" id="2_world"]
+[ext_resource type="Script" uid="uid://cdu5tlyk72uu4" path="res://addons/gecs/world.gd" id="2_world"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")

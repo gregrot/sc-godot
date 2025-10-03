@@ -3,13 +3,13 @@ extends Node2D
 const WorldScene := preload("res://addons/gecs/world.gd")
 const MovementSystem := preload("res://robot/systems/movement_system.gd")
 const RobotFactory := preload("res://robot/robot_factory.gd")
-const MechanismFrame := preload("res://robot/entities/frame.gd")
 const FrameStatusComponent := preload("res://robot/components/c_frame_status.gd")
 
 var world: World
 var factory := RobotFactory.new()
 var robot_frames: Array = []
 var status_label: Label
+var frame_visuals: Dictionary = {}
 
 func _ready() -> void:
 	await _ensure_ecs_singleton()
@@ -51,10 +51,23 @@ func _spawn_robot(speed: float = 4.0) -> void:
 	robot_frames.append(frame)
 	_update_status_text()
 
-func _ensure_frame_visual(frame: MechanismFrame) -> void:
-	var status: C_FrameStatus = frame.get_component(FrameStatusComponent)
-	var pos := Vector2.ZERO if status == null else status.position
-	frame.update_visual(pos)
+func _ensure_frame_visual(frame) -> void:
+	if frame_visuals.has(frame):
+		return
+	var shape := Polygon2D.new()
+	shape.polygon = PackedVector2Array([
+		Vector2(-16, -12),
+		Vector2(16, 0),
+		Vector2(-16, 12)
+	])
+	shape.color = Color.hex(0x4fd5ffff)
+	add_child(shape)
+	frame_visuals[frame] = shape
+
+func _update_frame_visual(frame, position: Vector2) -> void:
+	_ensure_frame_visual(frame)
+	var shape: Polygon2D = frame_visuals[frame]
+	shape.position = position
 
 func _process(delta: float) -> void:
 	if Engine.has_singleton("ECS") and ECS.world != null:
@@ -74,5 +87,6 @@ func _update_status_text() -> void:
 		var status = frame.get_component(FrameStatusComponent)
 		if status == null:
 			continue
+		_update_frame_visual(frame, status.position)
 		lines.append("%s pos=(%.2f, %.2f)" % [frame.name, status.position.x, status.position.y])
 	status_label.text = "\n".join(lines)

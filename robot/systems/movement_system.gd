@@ -28,6 +28,4 @@ func process(module: Entity, delta: float) -> void:
 	if status == null:
 		return
 	status.position += Vector2.RIGHT * move_capability.speed * delta
-	if frame.has_method("update_visual"):
-		frame.update_visual(status.position)
 	frame.set_meta("position", status.position)
