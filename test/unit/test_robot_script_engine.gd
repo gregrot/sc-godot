@@ -1,9 +1,11 @@
 extends GutTest
 
 var engine: RobotScriptEngine
+var printed: Array
 
 func before_each():
 	engine = RobotScriptEngine.new()
+	printed = []
 
 func test_run_assigns_variables_and_returns_last_value():
 	var result := engine.run("answer = 1 + 2\nanswer")
@@ -38,5 +40,27 @@ func test_run_invokes_bound_callable():
 	assert_true(result.get("ok", false), "run() should succeed with bound callable")
 	assert_eq(8, result.get("vars", {}).get("value"))
 
+func test_functions_can_call_each_other_and_builtins():
+	engine.bind("print", Callable(self, "_capture_print"))
+	var script := "func callOtherFunc(value)\n\tvalue\nend\n\nfunc someFunc(a, b)\n\tcallOtherFunc(a + b)\nend\n\nprint(someFunc(3, 7))"
+	var result := engine.run(script)
+	assert_true(result.get("ok", false), "run() should succeed with functions")
+	assert_eq(1, printed.size(), "expected one print call")
+	assert_eq(10, printed[0])
+
+func test_function_argument_mismatch_reports_error():
+	var script := "func onlyOne(x)\n\tx\nend\n\nonlyOne(1, 2)"
+	var result := engine.run(script)
+	assert_false(result.get("ok", true), "run() should fail on arity mismatch")
+	var errors: PackedStringArray = result.get("errors", PackedStringArray())
+	assert_true(errors.size() > 0, "errors should be reported")
+	assert_true(errors[0].find("expected 1") >= 0, "message should mention expected count")
+
 func _double(value):
 	return value * 2
+
+func _capture_print(...args) -> void:
+	if args.size() == 0:
+		printed.append(null)
+	else:
+		printed.append(args[0])

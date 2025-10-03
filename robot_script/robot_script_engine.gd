@@ -12,6 +12,10 @@ const NODE_UNARY := Parser.NODE_UNARY
 const NODE_LITERAL := Parser.NODE_LITERAL
 const NODE_VAR := Parser.NODE_VAR
 const NODE_CALL := Parser.NODE_CALL
+const NODE_FUNCTION := Parser.NODE_FUNCTION
+
+const FUNCTION_KIND := "__function__"
+const ENV_PARENT_KEY := "__parent__"
 
 var _builtins: Dictionary = {}
 var _errors: PackedStringArray = PackedStringArray()
@@ -59,12 +63,13 @@ func _parse(tokens: Array) -> Dictionary:
 
 func _execute(ast: Dictionary, variables: Dictionary) -> Dictionary:
 	var env: Dictionary = variables.duplicate()
+	env.erase(ENV_PARENT_KEY)
 	var last: Variant = null
 	for stmt in ast["body"]:
 		last = _exec_stmt(stmt, env)
 		if _has_errors():
 			return _fail(env)
-	return {"ok": true, "result": last, "vars": env}
+	return {"ok": true, "result": last, "vars": _snapshot_env(env)}
 
 func _exec_stmt(stmt: Dictionary, env: Dictionary) -> Variant:
 	match stmt["type"]:
@@ -76,6 +81,16 @@ func _exec_stmt(stmt: Dictionary, env: Dictionary) -> Variant:
 			return v
 		NODE_EXPR_STMT:
 			return _eval_expr(stmt["expr"], env)
+		NODE_FUNCTION:
+			var fn_def: Dictionary = {
+				"name": stmt["name"],
+				"params": stmt["params"],
+				"body": stmt["body"],
+				"closure": env,
+				FUNCTION_KIND: true
+			}
+			env[stmt["name"]] = fn_def
+			return null
 		_:
 			_report_error("Runtime: Unknown statement type '%s'." % str(stmt["type"]))
 			return null
@@ -85,10 +100,10 @@ func _eval_expr(node: Dictionary, env: Dictionary) -> Variant:
 		NODE_LITERAL:
 			return node["value"]
 		NODE_VAR:
-			if not env.has(node["name"]):
+			if not _env_has(env, node["name"]):
 				_report_error("Runtime %d:%d: Undefined variable '%s'." % [node.get("line", 0), node.get("col", 0), node["name"]])
 				return null
-			return env[node["name"]]
+			return _env_get(env, node["name"])
 		NODE_UNARY:
 			var v: Variant = _eval_expr(node["expr"], env)
 			if _has_errors():
@@ -142,9 +157,12 @@ func _eval_expr(node: Dictionary, env: Dictionary) -> Variant:
 				args.append(av)
 				if _has_errors():
 					return null
-			if env.has(fn_name) and env[fn_name] is Callable:
-				var c: Callable = env[fn_name]
-				return c.callv(args)
+			if _env_has(env, fn_name):
+				var target := _env_get(env, fn_name)
+				if target is Callable:
+					return target.callv(args)
+				if target is Dictionary and target.get(FUNCTION_KIND, false):
+					return _call_user_function(target, args)
 			if _builtins.has(fn_name):
 				var cb: Callable = _builtins[fn_name]
 				return cb.callv(args)
@@ -154,6 +172,54 @@ func _eval_expr(node: Dictionary, env: Dictionary) -> Variant:
 			_report_error("Runtime: Unknown expression type '%s'." % str(node["type"]))
 			return null
 
+func _call_user_function(func_def: Dictionary, args: Array) -> Variant:
+	var params: Array = func_def.get("params", [])
+	var name: String = func_def.get("name", "<function>")
+	if args.size() != params.size():
+		_report_error("Runtime: Function '%s' expected %d arguments but got %d." % [name, params.size(), args.size()])
+		return null
+	var parent_env: Dictionary = func_def.get("closure", {})
+	var local_env: Dictionary = {ENV_PARENT_KEY: parent_env}
+	for idx in params.size():
+		local_env[params[idx]] = args[idx]
+	var last: Variant = null
+	for stmt in func_def.get("body", []):
+		last = _exec_stmt(stmt, local_env)
+		if _has_errors():
+			return null
+	return last
+
+func _env_has(env: Dictionary, name: String) -> bool:
+	var current: Variant = env
+	while current is Dictionary:
+		var dict: Dictionary = current
+		if dict.has(name):
+			return true
+		current = dict.get(ENV_PARENT_KEY, null)
+	return false
+
+func _env_get(env: Dictionary, name: String) -> Variant:
+	var current: Variant = env
+	while current is Dictionary:
+		var dict: Dictionary = current
+		if dict.has(name):
+			return dict[name]
+		current = dict.get(ENV_PARENT_KEY, null)
+	return null
+
+func _snapshot_env(env: Variant) -> Dictionary:
+	if not (env is Dictionary):
+		return {}
+	var copy: Dictionary = {}
+	for key in env.keys():
+		if key == ENV_PARENT_KEY:
+			continue
+		var value: Variant = env[key]
+		if value is Dictionary and value.get(FUNCTION_KIND, false):
+			continue
+		copy[key] = value
+	return copy
+
 func _report_error(msg: String) -> void:
 	_errors.append(msg)
 
@@ -161,4 +227,4 @@ func _has_errors() -> bool:
 	return _errors.size() > 0
 
 func _fail(vars: Dictionary = {}) -> Dictionary:
-	return {"ok": false, "errors": _errors.duplicate(), "vars": vars}
+	return {"ok": false, "errors": _errors.duplicate(), "vars": _snapshot_env(vars)}
