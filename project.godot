@@ -14,10 +14,10 @@ config/name="SC-godot"
 run/main_scene="uid://bc8r6iksvb6d0"
 config/features=PackedStringArray("4.5", "Forward Plus")
 
-[autoload]
-
-BlockRegistry="*res://BlockRegistry.gd"
-
 [editor_plugins]
 
 enabled=PackedStringArray()
+
+[gui]
+
+theme/custom="res://themes/GrittyNeonTheme.tres"
