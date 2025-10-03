@@ -31,11 +31,12 @@ func _ensure_ecs_singleton() -> void:
 	if not viewport.has_node("Root"):
 		var holder := Node.new()
 		holder.name = "Root"
-		viewport.add_child(holder)
+		viewport.call_deferred("add_child", holder)
+		await get_tree().process_frame
 	if not Engine.has_singleton("ECS"):
 		var ecs_singleton := preload("res://addons/gecs/ecs.gd").new()
 		ecs_singleton.name = "ECS"
-		viewport.add_child(ecs_singleton)
+		viewport.call_deferred("add_child", ecs_singleton)
 		await ecs_singleton.ready
 
 func _setup_world() -> void:
