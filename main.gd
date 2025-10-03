@@ -12,10 +12,16 @@ var status_label: Label
 var frame_visuals: Dictionary = {}
 
 func _ready() -> void:
+	print("_ensure_ecs_singleton")
 	await _ensure_ecs_singleton()
+	print("Finished _ensure_ecs_singleton")
+	print("_setup_world")
 	await _setup_world()
+	print("Finished _setup_world")
 	status_label = _ensure_status_label()
+	print("_spawn_robot")
 	_spawn_robot()
+	print("Finished _spawn_robot")
 
 func _ensure_status_label() -> Label:
 	var label := Label.new()
@@ -40,7 +46,8 @@ func _ensure_ecs_singleton() -> void:
 
 func _setup_world() -> void:
 	world = $World
-	await world.ready
+	if not world.is_node_ready():
+		await world.ready
 	ECS.world = world
 	ECS.debug = false
 	world.add_system(MovementSystem.new())
@@ -63,6 +70,7 @@ func _ensure_frame_visual(frame) -> void:
 	shape.color = Color.hex(0x4fd5ffff)
 	add_child(shape)
 	frame_visuals[frame] = shape
+	print("Added visuals")
 
 func _update_frame_visual(frame, position: Vector2) -> void:
 	_ensure_frame_visual(frame)
