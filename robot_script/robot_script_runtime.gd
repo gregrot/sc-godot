@@ -11,6 +11,7 @@ const NODE_LITERAL := Parser.NODE_LITERAL
 const NODE_VAR := Parser.NODE_VAR
 const NODE_CALL := Parser.NODE_CALL
 const NODE_FUNCTION := Parser.NODE_FUNCTION
+const NODE_FOR := Parser.NODE_FOR
 
 const FUNCTION_KIND := "__function__"
 const ENV_PARENT_KEY := "__parent__"
@@ -69,6 +70,8 @@ func execute_statement(stmt: Dictionary, scope: Dictionary = env) -> Variant:
 			}
 			scope[stmt.get("name")] = fn_def
 			return null
+		NODE_FOR:
+			return _execute_for_loop(stmt, scope)
 		_:
 			_report_error("Runtime: Unknown statement type '%s'." % str(stmt.get("type")))
 			return null
@@ -211,3 +214,37 @@ func _env_assign(scope: Dictionary, name: String, value: Variant) -> void:
 
 func _report_error(msg: String) -> void:
 	errors.append(msg)
+
+func assign(name: String, value: Variant, scope: Dictionary = env) -> void:
+	_env_assign(scope, name, value)
+
+func _execute_for_loop(stmt: Dictionary, scope: Dictionary) -> Variant:
+	var iter_name: String = stmt.get("iter", "")
+	var start_val: Variant = evaluate_expression(stmt.get("start", {}), scope)
+	if has_errors():
+		return null
+	var end_val: Variant = evaluate_expression(stmt.get("end", {}), scope)
+	if has_errors():
+		return null
+	if not (start_val is int or start_val is float):
+		_report_error("Runtime: For-loop start must be a number.")
+		return null
+	if not (end_val is int or end_val is float):
+		_report_error("Runtime: For-loop end must be a number.")
+		return null
+	var start_int: int = int(start_val)
+	var end_int: int = int(end_val)
+	var step: int = 1 if start_int <= end_int else -1
+	var current := start_int
+	while true:
+		_env_assign(scope, iter_name, current)
+		for inner_stmt in stmt.get("body", []):
+			var result = execute_statement(inner_stmt, scope)
+			if has_errors():
+				return result
+		if current == end_int:
+			break
+		current += step
+		if step == 0:
+			break
+	return null

@@ -56,6 +56,13 @@ func test_function_argument_mismatch_reports_error():
 	assert_true(errors.size() > 0, "errors should be reported")
 	assert_true(errors[0].find("expected 1") >= 0, "message should mention expected count")
 
+func test_for_loop_accumulates_values():
+	var script := "total = 0\nfor i in 1..4\n\ttotal = total + i\nend\n"
+	var result := engine.run(script)
+	assert_true(result.get("ok", false), "run() should succeed for for-loop")
+	var vars: Dictionary = result.get("vars", {})
+	assert_eq(10, vars.get("total"))
+
 func _double(value):
 	return value * 2
 

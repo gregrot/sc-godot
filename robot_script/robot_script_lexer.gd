@@ -6,6 +6,7 @@ class_name RobotScriptLexer
 enum TokenType {
 	IDENT, NUMBER, STRING,
 	LPAREN, RPAREN, COMMA, PLUS, MINUS, STAR, SLASH, EQUAL, SEMICOLON,
+	DOT_DOT,
 	NEWLINE, EOF
 }
 
@@ -53,6 +54,12 @@ class _Lexer:
 					_emit(TokenType.SLASH, c)
 				"=":
 					_emit(TokenType.EQUAL, c)
+				".":
+					if _peek() == ".":
+						_advance()
+						_emit(TokenType.DOT_DOT, "..")
+					else:
+						_emit_error("Unexpected '.'.")
 				";":
 					_emit(TokenType.SEMICOLON, c)
 				"\"":
@@ -69,6 +76,11 @@ class _Lexer:
 
 	func _peek() -> String:
 		return "" if _at_end() else src[i]
+
+	func _peek_next() -> String:
+		if i + 1 >= src.length():
+			return ""
+		return src[i + 1]
 
 	func _advance() -> String:
 		if _at_end():
@@ -102,7 +114,7 @@ class _Lexer:
 		var s: String = first
 		while not _at_end() and _is_digit(_peek()):
 			s += _advance()
-		if not _at_end() and _peek() == ".":
+		if not _at_end() and _peek() == "." and _peek_next() != ".":
 			s += _advance()
 			while not _at_end() and _is_digit(_peek()):
 				s += _advance()

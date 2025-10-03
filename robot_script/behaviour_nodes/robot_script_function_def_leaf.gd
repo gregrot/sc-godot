@@ -24,3 +24,6 @@ func _run(_delta: float, _actor: Node, _blackboard: Blackboard, runtime: RobotSc
 		return BTStatus.FAILURE
 	_registered_runtime_id = runtime.get_instance_id()
 	return BTStatus.SUCCESS
+
+func _get_duration() -> float:
+	return 0.0
