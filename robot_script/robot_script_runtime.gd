@@ -11,6 +11,7 @@ const NODE_LITERAL := Parser.NODE_LITERAL
 const NODE_VAR := Parser.NODE_VAR
 const NODE_CALL := Parser.NODE_CALL
 const NODE_FUNCTION := Parser.NODE_FUNCTION
+const NODE_FOR := Parser.NODE_FOR
 const NODE_ARRAY := Parser.NODE_ARRAY
 const NODE_OBJECT := Parser.NODE_OBJECT
 const NODE_INDEX := Parser.NODE_INDEX
@@ -69,10 +70,12 @@ func execute_statement(stmt: Dictionary, scope: Dictionary = env) -> Variant:
 				"params": stmt.get("params", []),
 				"body": stmt.get("body", []),
 				"closure": scope,
-				FUNCTION_KIND: true
+				FUNCTION_KIND: true,
 			}
 			scope[stmt.get("name")] = fn_def
 			return null
+		NODE_FOR:
+			return _execute_for_loop(stmt, scope)
 		_:
 			_report_error("Runtime: Unknown statement type '%s'." % str(stmt.get("type")))
 			return null
@@ -132,91 +135,91 @@ func evaluate_expression(node: Dictionary, scope: Dictionary = env) -> Variant:
 				_:
 					_report_error("Runtime: Unknown binary operator '%s'." % node.get("op"))
 					return null
-                NODE_CALL:
-                        var fn_name: String = node.get("name", "")
-                        var args: Array = []
-                        for a_node in node.get("args", []):
-                                var av: Variant = evaluate_expression(a_node, scope)
-                                args.append(av)
-                                if has_errors():
-                                        return null
-                        if node.has("callee"):
-                                var callee: Variant = evaluate_expression(node.get("callee"), scope)
-                                if has_errors():
-                                        return null
-                                if callee is Callable:
-                                        return callee.callv(args)
-                                if callee is Dictionary and callee.get(FUNCTION_KIND, false):
-                                        return _call_user_function(callee, args)
-                                _report_error("Runtime %d:%d: Value is not callable." % [node.get("line", 0), node.get("col", 0)])
-                                return null
-                        if fn_name != "":
-                                if _env_has(scope, fn_name):
-                                        var target: Variant = _env_get(scope, fn_name)
-                                        if target is Callable:
-                                                return target.callv(args)
-                                        if target is Dictionary and target.get(FUNCTION_KIND, false):
-                                                return _call_user_function(target, args)
-                                if builtins.has(fn_name):
-                                        var cb: Callable = builtins[fn_name]
-                                        return cb.callv(args)
-                                _report_error("Runtime %d:%d: Unknown function '%s'." % [node.get("line", 0), node.get("col", 0), fn_name])
-                                return null
-                        _report_error("Runtime %d:%d: Cannot call value." % [node.get("line", 0), node.get("col", 0)])
-                        return null
-                NODE_ARRAY:
-                        var arr: Array = []
-                        for element in node.get("elements", []):
-                                var val: Variant = evaluate_expression(element, scope)
-                                arr.append(val)
-                                if has_errors():
-                                        return null
-                        return arr
-                NODE_OBJECT:
-                        var dict: Dictionary = {}
-                        for prop in node.get("properties", []):
-                                var value_expr: Dictionary = prop.get("value")
-                                var value: Variant = evaluate_expression(value_expr, scope)
-                                if has_errors():
-                                        return null
-                                dict[prop.get("key")] = value
-                        return dict
-                NODE_INDEX:
-                        var target: Variant = evaluate_expression(node.get("object"), scope)
-                        var index_value: Variant = evaluate_expression(node.get("index"), scope)
-                        if has_errors():
-                                return null
-                        if target is Array:
-                                if not (index_value is int):
-                                        if index_value is float and int(index_value) == index_value:
-                                                index_value = int(index_value)
-                                        else:
-                                                _report_error("Runtime %d:%d: Array index must be an integer." % [node.get("line", 0), node.get("col", 0)])
-                                                return null
-                                var idx: int = int(index_value)
-                                if idx < 0 or idx >= target.size():
-                                        _report_error("Runtime %d:%d: Array index %d out of bounds." % [node.get("line", 0), node.get("col", 0), idx])
-                                        return null
-                                return target[idx]
-                        if target is Dictionary:
-                                if not target.has(index_value):
-                                        _report_error("Runtime %d:%d: Key '%s' not found." % [node.get("line", 0), node.get("col", 0), str(index_value)])
-                                        return null
-                                return target[index_value]
-                        _report_error("Runtime %d:%d: Cannot index value of type %s." % [node.get("line", 0), node.get("col", 0), Variant.get_type_name(typeof(target))])
-                        return null
-                NODE_GET:
-                        var object_value: Variant = evaluate_expression(node.get("object"), scope)
-                        if has_errors():
-                                return null
-                        if object_value is Dictionary:
-                                var property: Variant = node.get("property")
-                                if object_value.has(property):
-                                        return object_value[property]
-                                _report_error("Runtime %d:%d: Property '%s' not found." % [node.get("line", 0), node.get("col", 0), str(property)])
-                                return null
-                        _report_error("Runtime %d:%d: Cannot access property on type %s." % [node.get("line", 0), node.get("col", 0), Variant.get_type_name(typeof(object_value))])
-                        return null
+		NODE_CALL:
+			var fn_name: String = node.get("name", "")
+			var args: Array = []
+			for a_node in node.get("args", []):
+				var av: Variant = evaluate_expression(a_node, scope)
+				args.append(av)
+				if has_errors():
+					return null
+			if node.has("callee"):
+				var callee: Variant = evaluate_expression(node.get("callee"), scope)
+				if has_errors():
+					return null
+				if callee is Callable:
+					return callee.callv(args)
+				if callee is Dictionary and callee.get(FUNCTION_KIND, false):
+					return _call_user_function(callee, args)
+				_report_error("Runtime %d:%d: Value is not callable." % [node.get("line", 0), node.get("col", 0)])
+				return null
+			if fn_name != "":
+				if _env_has(scope, fn_name):
+					var target: Variant = _env_get(scope, fn_name)
+					if target is Callable:
+						return target.callv(args)
+					if target is Dictionary and target.get(FUNCTION_KIND, false):
+						return _call_user_function(target, args)
+				if builtins.has(fn_name):
+					var cb: Callable = builtins[fn_name]
+					return cb.callv(args)
+				_report_error("Runtime %d:%d: Unknown function '%s'." % [node.get("line", 0), node.get("col", 0), fn_name])
+				return null
+			_report_error("Runtime %d:%d: Cannot call value." % [node.get("line", 0), node.get("col", 0)])
+			return null
+		NODE_ARRAY:
+			var arr: Array = []
+			for element in node.get("elements", []):
+				var val: Variant = evaluate_expression(element, scope)
+				arr.append(val)
+				if has_errors():
+					return null
+			return arr
+		NODE_OBJECT:
+			var dict: Dictionary = {}
+			for prop in node.get("properties", []):
+				var value_expr: Dictionary = prop.get("value")
+				var value: Variant = evaluate_expression(value_expr, scope)
+				if has_errors():
+					return null
+				dict[prop.get("key")] = value
+			return dict
+		NODE_INDEX:
+			var target: Variant = evaluate_expression(node.get("object"), scope)
+			var index_value: Variant = evaluate_expression(node.get("index"), scope)
+			if has_errors():
+				return null
+			if target is Array:
+				if not (index_value is int):
+					if index_value is float and int(index_value) == index_value:
+						index_value = int(index_value)
+					else:
+						_report_error("Runtime %d:%d: Array index must be an integer." % [node.get("line", 0), node.get("col", 0)])
+						return null
+				var idx: int = int(index_value)
+				if idx < 0 or idx >= target.size():
+					_report_error("Runtime %d:%d: Array index %d out of bounds." % [node.get("line", 0), node.get("col", 0), idx])
+					return null
+				return target[idx]
+			if target is Dictionary:
+				if not target.has(index_value):
+					_report_error("Runtime %d:%d: Key '%s' not found." % [node.get("line", 0), node.get("col", 0), str(index_value)])
+					return null
+				return target[index_value]
+			_report_error("Runtime %d:%d: Cannot index value of type %s." % [node.get("line", 0), node.get("col", 0), Variant.get_type_name(typeof(target))])
+			return null
+		NODE_GET:
+			var object_value: Variant = evaluate_expression(node.get("object"), scope)
+			if has_errors():
+				return null
+			if object_value is Dictionary:
+				var property: Variant = node.get("property")
+				if object_value.has(property):
+					return object_value[property]
+				_report_error("Runtime %d:%d: Property '%s' not found." % [node.get("line", 0), node.get("col", 0), str(property)])
+				return null
+			_report_error("Runtime %d:%d: Cannot access property on type %s." % [node.get("line", 0), node.get("col", 0), Variant.get_type_name(typeof(object_value))])
+			return null
 		_:
 			_report_error("Runtime: Unknown expression type '%s'." % str(node.get("type")))
 			return null
@@ -281,3 +284,37 @@ func _env_assign(scope: Dictionary, name: String, value: Variant) -> void:
 
 func _report_error(msg: String) -> void:
 	errors.append(msg)
+
+func assign(name: String, value: Variant, scope: Dictionary = env) -> void:
+	_env_assign(scope, name, value)
+
+func _execute_for_loop(stmt: Dictionary, scope: Dictionary) -> Variant:
+	var iter_name: String = stmt.get("iter", "")
+	var start_val: Variant = evaluate_expression(stmt.get("start", {}), scope)
+	if has_errors():
+		return null
+	var end_val: Variant = evaluate_expression(stmt.get("end", {}), scope)
+	if has_errors():
+		return null
+	if not (start_val is int or start_val is float):
+		_report_error("Runtime: For-loop start must be a number.")
+		return null
+	if not (end_val is int or end_val is float):
+		_report_error("Runtime: For-loop end must be a number.")
+		return null
+	var start_int: int = int(start_val)
+	var end_int: int = int(end_val)
+	var step: int = 1 if start_int <= end_int else -1
+	var current := start_int
+	while true:
+		_env_assign(scope, iter_name, current)
+		for inner_stmt in stmt.get("body", []):
+			var result = execute_statement(inner_stmt, scope)
+			if has_errors():
+				return result
+		if current == end_int:
+			break
+		current += step
+		if step == 0:
+			break
+	return null

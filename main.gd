@@ -27,7 +27,7 @@ func _ready() -> void:
 	bt_debug_panel = RobotBtDebugPanel.instantiate()
 	bt_debug_panel.visible = false
 	bt_debug_panel.position = Vector2(20, 80)
-	bt_debug_panel.size = Vector2(360, 320)
+	bt_debug_panel.set_deferred("size", Vector2(360, 320))
 	add_child(bt_debug_panel)
 	bt_debug_panel.call_deferred("set_cpu_modules", [])
 	set_process(true)
@@ -101,6 +101,10 @@ func _update_frame_visual(frame, position: Vector2) -> void:
 	_ensure_frame_visual(frame)
 	var shape: Polygon2D = frame_visuals[frame]
 	shape.position = position
+	if FrameStatusComponent != null:
+		var status: C_FrameStatus = frame.get_component(FrameStatusComponent)
+		if status != null:
+			shape.rotation_degrees = status.rotation_degrees
 
 func _process(delta: float) -> void:
 	if is_instance_valid(ecs) and ecs.world != null:

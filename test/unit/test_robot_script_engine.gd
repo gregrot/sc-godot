@@ -84,6 +84,13 @@ func test_indexing_invalid_type_reports_error():
         assert_true(errors.size() > 0, "expected at least one error")
         assert_true(errors[0].find("Cannot index value") >= 0)
 
+func test_for_loop_accumulates_values():
+	var script := "total = 0\nfor i in 1..4\n\ttotal = total + i\nend\n"
+	var result := engine.run(script)
+	assert_true(result.get("ok", false), "run() should succeed for for-loop")
+	var vars: Dictionary = result.get("vars", {})
+	assert_eq(10, vars.get("total"))
+
 func _double(value):
         return value * 2
 

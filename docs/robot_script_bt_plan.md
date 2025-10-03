@@ -13,7 +13,8 @@ BT nodes must be deterministic and side-effect free beyond interacting with the 
 - **NODE_ASSIGN** → `RobotScriptAssignLeaf`. Evaluates the RHS expression and writes the result into the environment stored on the blackboard.
 - **NODE_EXPR_STMT** → `RobotScriptExpressionLeaf`. Evaluates the expression for side effects and writes the value into `robot_script/last_result`.
 - **NODE_FUNCTION** → `RobotScriptFunctionDefLeaf`. On first tick it registers the function definition (closure + body) in the runtime environment; subsequent ticks skip work. Function bodies run through `RobotScriptRuntime` when call expressions execute.
-- **NODE_BINARY / NODE_UNARY / NODE_LITERAL / NODE_VAR / NODE_CALL** – Expressions do not become separate BT nodes. Expression AST is evaluated by the owning leaf via `RobotScriptRuntime.eval_expr()` so evaluation errors surface on the leaf that triggered them.
+- **NODE_FOR** → `RobotScriptForLoop` (composite). Evaluates the range bounds once per run, assigns the iterator into the environment, and executes a nested `RobotScriptProgram` for each iteration.
+- **NODE_BINARY / NODE_UNARY / NODE_LITERAL / NODE_VAR / NODE_CALL** – Expressions do not become separate BT nodes. Expression AST is evaluated by the owning leaf via `RobotScriptRuntime.evaluate_expression()` so evaluation errors surface on the leaf that triggered them.
 
 Future control flow nodes reserve the following shapes:
 - **NODE_IF** (when added) → `RobotScriptIfComposite` with `condition`, `then_branch`, and optional `else_branch` child slots.
@@ -29,7 +30,7 @@ All RobotScript behaviours read/write under the `robot_script` namespace using `
 - `robot_script/last_result` → Result of the most recent expression statement or assignment.
 - `robot_script/errors` → PackedStringArray of runtime errors gathered during the last tick (cleared before execution).
 
-Leaves fetch the runtime from `robot_script/runtime` and MUST early-return `BTStatus.FAILURE` if it is missing. Successful leaves synchronise their local environment mutations back to `robot_script/env` and update `robot_script/last_result` when they produce a value.
+Leaves fetch the runtime from `robot_script/runtime` and MUST early-return `BTStatus.FAILURE` if it is missing. Successful leaves synchronise their local environment mutations back to `robot_script/env` and update `robot_script/last_result` when they produce a value. All instruction leaves wait one second before executing by default; composites can override this duration if they need different timing.
 
 ## Execution lifecycle
 - `RobotScriptBtBuilder.compile(ast, options)` returns `{ root: BTRoot, runtime: RobotScriptRuntime }`.

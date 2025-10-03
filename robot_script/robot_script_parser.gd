@@ -13,6 +13,7 @@ const NODE_LITERAL := "literal"
 const NODE_VAR := "var"
 const NODE_CALL := "call"
 const NODE_FUNCTION := "function"
+const NODE_FOR := "for"
 const NODE_ARRAY := "array"
 const NODE_OBJECT := "object"
 const NODE_INDEX := "index"
@@ -45,10 +46,42 @@ class _Parser:
 	func _statement() -> Dictionary:
 		if _check_keyword("func"):
 			return _function_decl()
+		if _check_keyword("for"):
+			return _for_loop()
 		if _check(TokenType.IDENT) and _check_next(TokenType.EQUAL):
 			return _assignment()
 		var expr: Dictionary = _expression()
 		return {"type": NODE_EXPR_STMT, "expr": expr}
+
+	func _for_loop() -> Dictionary:
+		var for_tok: Dictionary = _consume_keyword("for", "Expected 'for'.")
+		var name_tok: Dictionary = _consume(TokenType.IDENT, "Expected loop variable after 'for'.")
+		_consume_keyword("in", "Expected 'in' after loop variable.")
+		var start_expr: Dictionary = _expression()
+		_consume(TokenType.DOT_DOT, "Expected '..' in range expression.")
+		var end_expr: Dictionary = _expression()
+		_consume_optional_statement_separator()
+		_skip_separators()
+		var body: Array = []
+		while not _check_keyword("end"):
+			if _check(TokenType.EOF):
+				_error_here("Expected 'end' to close for loop.")
+				return {"type": NODE_FOR, "iter": name_tok.get("lex", ""), "start": start_expr, "end": end_expr, "body": body, "line": for_tok.get("line", 0), "col": for_tok.get("col", 0)}
+			var stmt: Dictionary = _statement()
+			if stmt != null:
+				body.append(stmt)
+			_consume_statement_separator()
+			_skip_separators()
+		_consume_keyword("end", "Expected 'end' after for loop body.")
+		return {
+			"type": NODE_FOR,
+			"iter": name_tok.get("lex", ""),
+			"start": start_expr,
+			"end": end_expr,
+			"body": body,
+			"line": for_tok.get("line", 0),
+			"col": for_tok.get("col", 0)
+		}
 
 	func _function_decl() -> Dictionary:
 		var func_tok: Dictionary = _consume_keyword("func", "Expected 'func'.")
