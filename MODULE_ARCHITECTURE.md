@@ -156,3 +156,7 @@ Grouping keeps aggregation logic localized and avoids state duplication on the f
 - **Persist module loadouts** – Serialize the frame entity, the relationship data, and the module entity resources. Restoring from save becomes re-instantiating entities and re-creating relationships.
 
 This architecture keeps modules reusable, separates concerns, and fully leverages GECS's relationship-driven design for modular gameplay mechanics.
+
+## 🧪 Sample Implementation
+
+The project includes a minimal example in `res://robot/` that follows this architecture. The `MechanismFrame` entity defines a single movement slot, a `MovementModule` provides the capability, and `RobotFactory` wires them together while `MovementSystem` consumes the movement capability to advance the frame. See `main.gd` for how the world assembles the robot at runtime.

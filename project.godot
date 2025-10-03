@@ -14,9 +14,13 @@ config/name="SC-godot"
 run/main_scene="uid://bc8r6iksvb6d0"
 config/features=PackedStringArray("4.5", "Forward Plus")
 
+[autoload]
+
+ECS="*res://addons/gecs/ecs.gd"
+
 [editor_plugins]
 
-enabled=PackedStringArray()
+enabled=PackedStringArray("res://addons/gecs/plugin.cfg")
 
 [gui]
 

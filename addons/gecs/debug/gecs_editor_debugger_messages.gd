@@ -23,7 +23,7 @@ const Msg = {
 
 ## Helper function to check if we can send messages to the editor debugger.
 static func can_send_message() -> bool:
-	return not Engine.is_editor_hint() and OS.has_feature("editor")
+	return EngineDebugger.is_active()
 
 
 static func world_init(world: World) -> void:
