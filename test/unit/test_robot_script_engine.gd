@@ -49,15 +49,43 @@ func test_functions_can_call_each_other_and_builtins():
 	assert_eq(10, printed[0])
 
 func test_function_argument_mismatch_reports_error():
-	var script := "func onlyOne(x)\n\tx\nend\n\nonlyOne(1, 2)"
-	var result := engine.run(script)
-	assert_false(result.get("ok", true), "run() should fail on arity mismatch")
-	var errors: PackedStringArray = result.get("errors", PackedStringArray())
-	assert_true(errors.size() > 0, "errors should be reported")
-	assert_true(errors[0].find("expected 1") >= 0, "message should mention expected count")
+        var script := "func onlyOne(x)\n\tx\nend\n\nonlyOne(1, 2)"
+        var result := engine.run(script)
+        assert_false(result.get("ok", true), "run() should fail on arity mismatch")
+        var errors: PackedStringArray = result.get("errors", PackedStringArray())
+        assert_true(errors.size() > 0, "errors should be reported")
+        assert_true(errors[0].find("expected 1") >= 0, "message should mention expected count")
+
+func test_array_literal_and_index_access():
+        var script := "items = [1, 2, 3]\nsecond = items[1]\nitems[0]"
+        var result := engine.run(script)
+        assert_true(result.get("ok", false), "run() should succeed with array literals")
+        var vars: Dictionary = result.get("vars", {})
+        assert_true(vars.has("items"), "expected 'items' variable")
+        assert_eq([1, 2, 3], vars.get("items"))
+        assert_eq(2, vars.get("second"))
+        assert_eq(1, result.get("result"))
+
+func test_object_literal_supports_dot_and_index_access():
+        var script := "data = {name: \"Robo\", stats: {level: 5}}\nname = data.name\nlevel = data.stats[\"level\"]\ndata.stats.level"
+        var result := engine.run(script)
+        assert_true(result.get("ok", false), "run() should support object access")
+        var vars: Dictionary = result.get("vars", {})
+        assert_eq({"name": "Robo", "stats": {"level": 5}}, vars.get("data"))
+        assert_eq("Robo", vars.get("name"))
+        assert_eq(5, vars.get("level"))
+        assert_eq(5, result.get("result"))
+
+func test_indexing_invalid_type_reports_error():
+        var script := "value = 10[0]"
+        var result := engine.run(script)
+        assert_false(result.get("ok", true), "run() should fail when indexing non-indexable")
+        var errors: PackedStringArray = result.get("errors", PackedStringArray())
+        assert_true(errors.size() > 0, "expected at least one error")
+        assert_true(errors[0].find("Cannot index value") >= 0)
 
 func _double(value):
-	return value * 2
+        return value * 2
 
 func _capture_print(...args) -> void:
 	if args.size() == 0:

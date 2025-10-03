@@ -4,9 +4,11 @@ class_name RobotScriptLexer
 # Token definitions and tokenizer for RobotScriptEngine.
 
 enum TokenType {
-	IDENT, NUMBER, STRING,
-	LPAREN, RPAREN, COMMA, PLUS, MINUS, STAR, SLASH, EQUAL, SEMICOLON,
-	NEWLINE, EOF
+        IDENT, NUMBER, STRING,
+        LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET,
+        COMMA, COLON, DOT,
+        PLUS, MINUS, STAR, SLASH, EQUAL, SEMICOLON,
+        NEWLINE, EOF
 }
 
 static func tokenize(src: String, err_cb: Callable) -> Array:
@@ -37,14 +39,26 @@ class _Lexer:
 					col = 1
 				"#":
 					_skip_comment()
-				"(":
-					_emit(TokenType.LPAREN, c)
-				")":
-					_emit(TokenType.RPAREN, c)
-				",":
-					_emit(TokenType.COMMA, c)
-				"+":
-					_emit(TokenType.PLUS, c)
+                                "(":
+                                        _emit(TokenType.LPAREN, c)
+                                ")":
+                                        _emit(TokenType.RPAREN, c)
+                                "{":
+                                        _emit(TokenType.LBRACE, c)
+                                "}":
+                                        _emit(TokenType.RBRACE, c)
+                                "[":
+                                        _emit(TokenType.LBRACKET, c)
+                                "]":
+                                        _emit(TokenType.RBRACKET, c)
+                                ",":
+                                        _emit(TokenType.COMMA, c)
+                                ":":
+                                        _emit(TokenType.COLON, c)
+                                ".":
+                                        _emit(TokenType.DOT, c)
+                                "+":
+                                        _emit(TokenType.PLUS, c)
 				"-":
 					_emit(TokenType.MINUS, c)
 				"*":
