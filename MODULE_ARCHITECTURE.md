@@ -2,7 +2,7 @@
 
 > **Design attachable gameplay modules with clean ECS separation**
 
-This guide shows how to build a "frame + modules" mechanic—such as a robot or vehicle chassis that gains movement, inventory, or utility features from attachable modules—using [GECS](../README.md). The pattern keeps modules decoupled, lets systems reason about capabilities, and allows designers to swap modules without rewriting logic.
+This guide shows how to build a "frame + modules" mechanic—such as a robot or vehicle chassis that gains movement, inventory, or utility features from attachable modules—using [GECS](addons/gecs/README.md). The pattern keeps modules decoupled, lets systems reason about capabilities, and allows designers to swap modules without rewriting logic.
 
 ## 🧩 High-level structure
 
