@@ -11,9 +11,8 @@ config_version=5
 [application]
 
 config/name="SC-godot"
-run/main_scene="res://main.tscn"
+run/main_scene="uid://bc8r6iksvb6d0"
 config/features=PackedStringArray("4.5", "Forward Plus")
-config/icon="res://icon.svg"
 
 [autoload]
 
@@ -21,4 +20,4 @@ BlockRegistry="*res://BlockRegistry.gd"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+enabled=PackedStringArray()
