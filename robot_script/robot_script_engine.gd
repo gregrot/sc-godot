@@ -158,7 +158,7 @@ func _eval_expr(node: Dictionary, env: Dictionary) -> Variant:
 				if _has_errors():
 					return null
 			if _env_has(env, fn_name):
-				var target := _env_get(env, fn_name)
+				var target: Variant = _env_get(env, fn_name)
 				if target is Callable:
 					return target.callv(args)
 				if target is Dictionary and target.get(FUNCTION_KIND, false):
