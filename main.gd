@@ -2,6 +2,7 @@ extends Node2D
 
 const WorldScene := preload("res://addons/gecs/world.gd")
 const MovementSystem := preload("res://robot/systems/movement_system.gd")
+const RobotCpuSystem := preload("res://robot/systems/cpu_system.gd")
 const RobotFactory := preload("res://robot/robot_factory.gd")
 const FrameStatusComponent := preload("res://robot/components/c_frame_status.gd")
 
@@ -12,16 +13,11 @@ var status_label: Label
 var frame_visuals: Dictionary = {}
 
 func _ready() -> void:
-	print("_ensure_ecs_singleton")
 	await _ensure_ecs_singleton()
-	print("Finished _ensure_ecs_singleton")
-	print("_setup_world")
 	await _setup_world()
-	print("Finished _setup_world")
 	status_label = _ensure_status_label()
-	print("_spawn_robot")
 	_spawn_robot()
-	print("Finished _spawn_robot")
+	set_process(true)
 
 func _ensure_status_label() -> Label:
 	var label := Label.new()
@@ -50,6 +46,7 @@ func _setup_world() -> void:
 		await world.ready
 	ECS.world = world
 	ECS.debug = false
+	world.add_system(RobotCpuSystem.new())
 	world.add_system(MovementSystem.new())
 
 func _spawn_robot(speed: float = 4.0) -> void:
@@ -70,7 +67,6 @@ func _ensure_frame_visual(frame) -> void:
 	shape.color = Color.hex(0x4fd5ffff)
 	add_child(shape)
 	frame_visuals[frame] = shape
-	print("Added visuals")
 
 func _update_frame_visual(frame, position: Vector2) -> void:
 	_ensure_frame_visual(frame)
@@ -92,9 +88,14 @@ func _update_status_text() -> void:
 	for frame in robot_frames:
 		if not is_instance_valid(frame):
 			continue
+		var pos: Vector2 = Vector2.ZERO
 		var status = frame.get_component(FrameStatusComponent)
-		if status == null:
-			continue
-		_update_frame_visual(frame, status.position)
-		lines.append("%s pos=(%.2f, %.2f)" % [frame.name, status.position.x, status.position.y])
-	status_label.text = "\n".join(lines)
+		if status != null:
+			pos = status.position
+		if frame.has_meta("position"):
+			var meta_pos = frame.get_meta("position")
+			if meta_pos is Vector2:
+				pos = meta_pos
+		_update_frame_visual(frame, pos)
+		lines.append("%s pos=(%.2f, %.2f)" % [frame.name, pos.x, pos.y])
+	status_label.text = "Robots: %d\n%s" % [robot_frames.size(), "\n".join(lines)]

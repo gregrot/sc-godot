@@ -2,10 +2,12 @@ extends GutTest
 
 const WorldScene := preload("res://addons/gecs/world.gd")
 const MovementSystem := preload("res://robot/systems/movement_system.gd")
+const RobotCpuSystem := preload("res://robot/systems/cpu_system.gd")
 const RobotFactory := preload("res://robot/robot_factory.gd")
 const CFrameSlots := preload("res://robot/components/c_frame_slots.gd")
 const CModuleAttachment := preload("res://robot/components/c_module_attachment.gd")
 const CFrameStatus := preload("res://robot/components/c_frame_status.gd")
+const CMoveCapability := preload("res://robot/components/c_move_capability.gd")
 
 var world: World
 var factory: RobotFactory
@@ -48,6 +50,18 @@ func test_movement_system_updates_frame_position() -> void:
 	system.free()
 	assert_gt(status.position.x, 0.0)
 
+func test_cpu_module_binds_exports_into_robot_script() -> void:
+	var frame = factory.build_basic_robot(world, 1.0)
+	var cpu_module = _get_module(frame, "cpu")
+	var movement_module = _get_module(frame, "movement")
+	var capability = movement_module.get_component(CMoveCapability)
+	assert_eq(1.0, capability.speed)
+	var cpu_system := RobotCpuSystem.new()
+	cpu_system.process(cpu_module, 0.0)
+	cpu_system.free()
+	assert_eq(100.0, capability.speed)
+
+
 func _ensure_root_holder() -> void:
 	var viewport := get_tree().root
 	if not viewport.has_node("Root"):
@@ -62,3 +76,9 @@ func _ensure_ecs_singleton() -> Node:
 	ecs.name = "ECS"
 	get_tree().root.add_child(ecs)
 	return ecs
+
+func _get_module(frame: Entity, slot_name: String) -> Entity:
+	var attachments = frame.get_relationships(Relationship.new(CModuleAttachment.new(slot_name), null))
+	assert_not_null(attachments, "expected attachment for %s" % slot_name)
+	assert_gt(attachments.size(), 0, "no modules attached to slot %s" % slot_name)
+	return attachments[0].target
