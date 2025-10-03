@@ -20,7 +20,7 @@ ECS="*res://addons/gecs/ecs.gd"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gecs/plugin.cfg")
+enabled=PackedStringArray("res://addons/behaviour_toolkit/plugin.cfg", "res://addons/gecs/plugin.cfg")
 
 [gui]
 

@@ -72,6 +72,10 @@ func define_components() -> Array:
 
 Designers can author additional module scenes (weapons, cargo pods, life-support) that follow the same pattern.
 
+### CPU/Logic Modules
+
+A CPU module provides a programmable "brain" for the frame. In the reference implementation, `CpuModule` mounts into the dedicated `cpu` slot, carries a `C_CpuProgram` component with RobotScript source, and publishes capability markers for systems to discover. Other modules (for example, `MovementModule`) expose callable hooks via `C_ScriptFunctionExport` and live values via `C_ScriptPropertyExport`. `RobotCpuSystem` collects those exports, binds them into a `RobotScriptEngine`, and executes the program so RobotScript code can orchestrate attached hardware without bypassing ECS relationships.
+
 ## 🔗 Attaching modules with relationships
 
 Use GECS relationships to connect module entities to their owning frame:

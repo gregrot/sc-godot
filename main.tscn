@@ -10,5 +10,3 @@ script = ExtResource("1_main")
 script = ExtResource("2_world")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(0, 0)
-current = true
