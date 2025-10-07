@@ -1,3 +1,4 @@
+@tool
 extends RobotScriptLeaf
 class_name RobotScriptFunctionDefLeaf
 

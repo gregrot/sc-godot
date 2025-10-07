@@ -1,3 +1,4 @@
+@tool
 extends BTComposite
 class_name RobotScriptForLoop
 

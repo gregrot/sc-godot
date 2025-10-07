@@ -1,3 +1,4 @@
+@tool
 extends BTComposite
 class_name RobotScriptProgram
 
@@ -14,21 +15,21 @@ func tick(delta: float, actor: Node, blackboard: Blackboard) -> BTStatus:
 		blackboard.set_value(KEY_ERRORS, PackedStringArray())
 	if get_child_count() == 0:
 		last_status = BTStatus.SUCCESS
-		return last_status
+		return last_status as BTStatus
 	while _current_index < get_child_count():
 		var child := get_child(_current_index)
 		var response: int = child.tick(delta, actor, blackboard)
 		if response == BTStatus.FAILURE:
 			_reset_children()
 			last_status = BTStatus.FAILURE
-			return last_status
+			return last_status as BTStatus
 		if response == BTStatus.RUNNING:
 			last_status = BTStatus.RUNNING
-			return last_status
+			return last_status as BTStatus
 		_current_index += 1
 	_reset_children()
 	last_status = BTStatus.SUCCESS
-	return last_status
+	return last_status as BTStatus
 
 func _get_runtime(blackboard: Blackboard) -> RobotScriptRuntime:
 	var value: Variant = blackboard.get_value(KEY_RUNTIME)

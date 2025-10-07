@@ -1,3 +1,4 @@
+@tool
 extends BTLeaf
 class_name RobotScriptLeaf
 
@@ -15,7 +16,7 @@ func tick(delta: float, actor: Node, blackboard: Blackboard) -> BTStatus:
 	var runtime: RobotScriptRuntime = _get_runtime(blackboard)
 	if runtime == null:
 		last_status = BTStatus.FAILURE
-		return last_status
+		return last_status as BTStatus
 	if runtime.get_instance_id() != _runtime_id:
 		_runtime_id = runtime.get_instance_id()
 		_on_runtime_changed(runtime, blackboard)
@@ -26,7 +27,7 @@ func tick(delta: float, actor: Node, blackboard: Blackboard) -> BTStatus:
 			_elapsed += delta
 			if _elapsed < duration:
 				last_status = BTStatus.RUNNING
-				return last_status
+				return last_status as BTStatus
 			_pending_execution = false
 			_elapsed = 0.0
 	else:
@@ -36,13 +37,13 @@ func tick(delta: float, actor: Node, blackboard: Blackboard) -> BTStatus:
 		blackboard.set_value(KEY_ERRORS, runtime.get_errors())
 		_reset_timer()
 		last_status = BTStatus.FAILURE
-		return last_status
+		return last_status as BTStatus
 	_sync_environment(runtime, blackboard)
 	if status == BTStatus.SUCCESS:
 		_on_success(runtime, blackboard)
 	_reset_timer()
 	last_status = status
-	return last_status
+	return last_status as BTStatus
 
 func _run(_delta: float, _actor: Node, _blackboard: Blackboard, _runtime: RobotScriptRuntime) -> int:
 	return BTStatus.SUCCESS
