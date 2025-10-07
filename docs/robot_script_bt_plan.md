@@ -30,7 +30,7 @@ All RobotScript behaviours read/write under the `robot_script` namespace using `
 - `robot_script/last_result` → Result of the most recent expression statement or assignment.
 - `robot_script/errors` → PackedStringArray of runtime errors gathered during the last tick (cleared before execution).
 
-Leaves fetch the runtime from `robot_script/runtime` and MUST early-return `BTStatus.FAILURE` if it is missing. Successful leaves synchronise their local environment mutations back to `robot_script/env` and update `robot_script/last_result` when they produce a value. Leaves should return `BTStatus.RUNNING` while their underlying work is still in progress so the tree naturally waits for completion before advancing.
+Leaves fetch the runtime from `robot_script/runtime` and MUST early-return `BTStatus.FAILURE` if it is missing. Successful leaves synchronise their local environment mutations back to `robot_script/env` and update `robot_script/last_result` when they produce a value. All instruction leaves wait one second before executing by default; composites can override this duration if they need different timing.
 
 ## Execution lifecycle
 - `RobotScriptBtBuilder.compile(ast, options)` returns `{ root: BTRoot, runtime: RobotScriptRuntime }`.
